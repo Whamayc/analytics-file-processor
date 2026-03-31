@@ -45,17 +45,26 @@ def _log_ora_error(exc: Exception) -> None:
         log("Oracle error", str(exc)[:80])
 
 
+def _build_dsn(host: str, port: str, service_name: str) -> str:
+    return (
+        f"(DESCRIPTION="
+        f"(ADDRESS=(PROTOCOL=TCP)(HOST={host})(PORT={port}))"
+        f"(CONNECT_DATA=(SERVICE_NAME={service_name}))"
+        f")"
+    )
+
+
 def _init_state() -> None:
     defaults = {
-        "ora_connection": None,
-        "ora_connected":  False,
-        "ora_username":   "",
-        "ora_dsn":        "",
-        "ora_result_df":  None,
-        "ora_last_sql":   "",
-        "ora_sql_input":  "",
-        "ora_xl_bytes":   None,
-        "ora_xl_key":     None,
+        "ora_connection":    None,
+        "ora_connected":     False,
+        "ora_username":      "",
+        "ora_dsn":           "",
+        "ora_result_df":     None,
+        "ora_last_sql":      "",
+        "ora_sql_input":     "",
+        "ora_xl_bytes":      None,
+        "ora_xl_key":        None,
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -111,13 +120,21 @@ if sub_view == "Connection Settings":
     with c1:
         username = st.text_input("Username", key="ora_username_input")
     with c2:
-        dsn_input = st.text_input(
-            "DSN",
-            key="ora_dsn_input",
-            placeholder="host:port/service_name  e.g. myhost.example.com:1521/ORCLPDB",
-        )
+        password = st.text_input("Password", type="password", key="ora_password_input")
 
-    password = st.text_input("Password", type="password", key="ora_password_input")
+    h1, h2, h3 = st.columns([3, 1, 2])
+    with h1:
+        ora_host = st.text_input("Host", key="ora_host_input", placeholder="myhost.example.com")
+    with h2:
+        ora_port = st.text_input("Port", key="ora_port_input", value="1521")
+    with h3:
+        ora_service = st.text_input("Service Name", key="ora_service_input", placeholder="ORCLPDB")
+
+    if ora_host and ora_port and ora_service:
+        dsn_input = _build_dsn(ora_host, ora_port, ora_service)
+        st.code(dsn_input, language="text")
+    else:
+        dsn_input = ""
 
     st.divider()
 
@@ -125,8 +142,8 @@ if sub_view == "Connection Settings":
 
     with btn_c1:
         if st.button("Test Connection", use_container_width=True):
-            if not username or not password or not dsn_input:
-                st.error("Username, password, and DSN are all required.", icon="✖️")
+            if not username or not password or not ora_host or not ora_port or not ora_service:
+                st.error("Username, password, host, port, and service name are all required.", icon="✖️")
             else:
                 try:
                     conn = oracledb.connect(user=username, password=password, dsn=dsn_input)
@@ -137,8 +154,8 @@ if sub_view == "Connection Settings":
 
     with btn_c2:
         if st.button("Connect", use_container_width=True, type="primary"):
-            if not username or not password or not dsn_input:
-                st.error("Username, password, and DSN are all required.", icon="✖️")
+            if not username or not password or not ora_host or not ora_port or not ora_service:
+                st.error("Username, password, host, port, and service name are all required.", icon="✖️")
             else:
                 try:
                     if st.session_state["ora_connected"] and st.session_state["ora_connection"]:
