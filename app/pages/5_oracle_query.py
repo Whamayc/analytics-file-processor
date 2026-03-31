@@ -61,10 +61,26 @@ def _build_dsn(host: str, port: str, service_name: str) -> str:
 
 
 def _ensure_thick_mode(lib_dir: str) -> None:
-    """Call init_oracle_client once per process. Raises on failure."""
+    """Switch to thick mode by calling init_oracle_client once per process.
+
+    Full Oracle Client installations (e.g. 19c) place oci.dll inside a 'bin'
+    subdirectory. If the given path fails with DPI-1047, we automatically retry
+    with <lib_dir>/bin before re-raising.
+    """
+    import os
     if not oracledb.is_thin_mode():
         return  # already initialised
-    oracledb.init_oracle_client(lib_dir=lib_dir if lib_dir else None)
+
+    path = lib_dir.strip() if lib_dir else None
+    try:
+        oracledb.init_oracle_client(lib_dir=path)
+    except Exception as first_exc:
+        # DPI-1047: oci.dll not found — try the bin subdirectory
+        if path and "DPI-1047" in str(first_exc):
+            bin_path = os.path.join(path, "bin")
+            oracledb.init_oracle_client(lib_dir=bin_path)
+        else:
+            raise
 
 
 def _init_state() -> None:
