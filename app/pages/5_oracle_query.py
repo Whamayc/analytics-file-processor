@@ -30,8 +30,8 @@ _MODE_DML   = "Execute (DML / PL-SQL)"
 
 def _ora_error(exc: Exception) -> str:
     """Return a formatted error string for oracledb exceptions.
-    ORA errors have a non-zero code; DPY/NL errors have code=0 and carry
-    the full message in e.message — avoid prepending 'ORA-0' in that case.
+    ORA errors have a non-zero code; DPY/NL errors have code=0 — avoid
+    prepending 'ORA-0' in that case.
     """
     try:
         e = exc.args[0]
@@ -53,48 +53,43 @@ def _log_ora_error(exc: Exception) -> None:
 
 def _build_dsn(host: str, port: str, service_name: str) -> str:
     return (
-        f"(DESCRIPTION="
+        "(DESCRIPTION="
         f"(ADDRESS=(PROTOCOL=TCP)(HOST={host})(PORT={port}))"
         f"(CONNECT_DATA=(SERVICE_NAME={service_name}))"
-        f")"
+        ")"
     )
 
 
 def _ensure_thick_mode(lib_dir: str) -> None:
-    """Switch to thick mode by calling init_oracle_client once per process.
+    """Switch to thick mode via init_oracle_client (once per process).
 
-    Full Oracle Client installations (e.g. 19c) place oci.dll inside a 'bin'
-    subdirectory. If the given path fails with DPI-1047, we automatically retry
-    with <lib_dir>/bin before re-raising.
+    Full Oracle Client installs (e.g. 19c) put oci.dll in <path>\\bin.
+    If the given path raises DPI-1047, retry with <path>\\bin automatically.
     """
-    import os
     if not oracledb.is_thin_mode():
         return  # already initialised
-
     path = lib_dir.strip() if lib_dir else None
     try:
         oracledb.init_oracle_client(lib_dir=path)
     except Exception as first_exc:
-        # DPI-1047: oci.dll not found — try the bin subdirectory
         if path and "DPI-1047" in str(first_exc):
-            bin_path = os.path.join(path, "bin")
-            oracledb.init_oracle_client(lib_dir=bin_path)
+            oracledb.init_oracle_client(lib_dir=os.path.join(path, "bin"))
         else:
             raise
 
 
 def _init_state() -> None:
     defaults = {
-        "ora_connection":    None,
-        "ora_connected":     False,
-        "ora_username":      "",
-        "ora_dsn":           "",
-        "ora_client_path":   "",
-        "ora_result_df":     None,
-        "ora_last_sql":      "",
-        "ora_sql_input":     "",
-        "ora_xl_bytes":      None,
-        "ora_xl_key":        None,
+        "ora_connection":  None,
+        "ora_connected":   False,
+        "ora_username":    "",
+        "ora_dsn":         "",
+        "ora_client_path": "",
+        "ora_result_df":   None,
+        "ora_last_sql":    "",
+        "ora_sql_input":   "",
+        "ora_xl_bytes":    None,
+        "ora_xl_key":      None,
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -145,7 +140,7 @@ if sub_view == "Connection Settings":
         "Oracle Client library path",
         key="ora_client_path",
         placeholder=r"C:\product\19.0.0\client_1",
-        help="Path to the Oracle Instant Client directory. Leave blank to use the system PATH.",
+        help="Path to the Oracle Client directory (e.g. Instant Client or full client). Leave blank to use the system PATH.",
     )
 
     st.divider()
