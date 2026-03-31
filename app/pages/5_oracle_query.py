@@ -152,10 +152,7 @@ if sub_view == "Connection Settings":
                 st.error("Username, password, host, port, and service name are all required.", icon="✖️")
             else:
                 try:
-                    conn = oracledb.connect(
-                        user=username, password=password,
-                        host=ora_host, port=int(ora_port), service_name=ora_service,
-                    )
+                    conn = oracledb.connect(user=username, password=password, dsn=dsn_input)
                     conn.close()
                     st.success("Connection successful.")
                 except Exception as exc:
@@ -172,10 +169,7 @@ if sub_view == "Connection Settings":
                             st.session_state["ora_connection"].close()
                         except Exception:
                             pass
-                    conn = oracledb.connect(
-                        user=username, password=password,
-                        host=ora_host, port=int(ora_port), service_name=ora_service,
-                    )
+                    conn = oracledb.connect(user=username, password=password, dsn=dsn_input)
                     st.session_state["ora_connection"] = conn
                     st.session_state["ora_connected"]  = True
                     st.session_state["ora_username"]   = username
