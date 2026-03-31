@@ -128,7 +128,7 @@ if sub_view == "Connection Settings":
     client_path = st.text_input(
         "Oracle Client library path",
         key="ora_client_path",
-        placeholder=r"C:\oracle\instantclient_21_9",
+        placeholder=r"C:\product\19.0.0\client_1",
         help="Path to the Oracle Instant Client directory. Leave blank to use the system PATH.",
     )
 
