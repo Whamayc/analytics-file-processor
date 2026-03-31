@@ -29,10 +29,15 @@ _MODE_DML   = "Execute (DML / PL-SQL)"
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _ora_error(exc: Exception) -> str:
-    """Return a formatted ORA-XXXXX error string, or str(exc) as fallback."""
+    """Return a formatted error string for oracledb exceptions.
+    ORA errors have a non-zero code; DPY/NL errors have code=0 and carry
+    the full message in e.message — avoid prepending 'ORA-0' in that case.
+    """
     try:
         e = exc.args[0]
-        return f"ORA-{e.code}: {e.message}"
+        if e.code:
+            return f"ORA-{e.code}: {e.message}"
+        return str(e.message)
     except Exception:
         return str(exc)
 
@@ -40,7 +45,8 @@ def _ora_error(exc: Exception) -> str:
 def _log_ora_error(exc: Exception) -> None:
     try:
         e = exc.args[0]
-        log("Oracle error", f"ORA-{e.code}")
+        label = f"ORA-{e.code}" if e.code else "DPY error"
+        log("Oracle error", f"{label}: {str(e.message)[:80]}")
     except Exception:
         log("Oracle error", str(exc)[:80])
 
@@ -146,7 +152,10 @@ if sub_view == "Connection Settings":
                 st.error("Username, password, host, port, and service name are all required.", icon="✖️")
             else:
                 try:
-                    conn = oracledb.connect(user=username, password=password, dsn=dsn_input)
+                    conn = oracledb.connect(
+                        user=username, password=password,
+                        host=ora_host, port=int(ora_port), service_name=ora_service,
+                    )
                     conn.close()
                     st.success("Connection successful.")
                 except Exception as exc:
@@ -163,7 +172,10 @@ if sub_view == "Connection Settings":
                             st.session_state["ora_connection"].close()
                         except Exception:
                             pass
-                    conn = oracledb.connect(user=username, password=password, dsn=dsn_input)
+                    conn = oracledb.connect(
+                        user=username, password=password,
+                        host=ora_host, port=int(ora_port), service_name=ora_service,
+                    )
                     st.session_state["ora_connection"] = conn
                     st.session_state["ora_connected"]  = True
                     st.session_state["ora_username"]   = username
