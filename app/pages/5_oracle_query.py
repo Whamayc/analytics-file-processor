@@ -60,12 +60,20 @@ def _build_dsn(host: str, port: str, service_name: str) -> str:
     )
 
 
+def _ensure_thick_mode(lib_dir: str) -> None:
+    """Call init_oracle_client once per process. Raises on failure."""
+    if not oracledb.is_thin_mode():
+        return  # already initialised
+    oracledb.init_oracle_client(lib_dir=lib_dir if lib_dir else None)
+
+
 def _init_state() -> None:
     defaults = {
         "ora_connection":    None,
         "ora_connected":     False,
         "ora_username":      "",
         "ora_dsn":           "",
+        "ora_client_path":   "",
         "ora_result_df":     None,
         "ora_last_sql":      "",
         "ora_sql_input":     "",
@@ -117,10 +125,14 @@ status_bar({
 if sub_view == "Connection Settings":
     sec_label("Oracle Connection")
 
-    st.info(
-        "Connecting in Thin mode — no Oracle Client installation required.",
-        icon="ℹ️",
+    client_path = st.text_input(
+        "Oracle Client library path",
+        key="ora_client_path",
+        placeholder=r"C:\oracle\instantclient_21_9",
+        help="Path to the Oracle Instant Client directory. Leave blank to use the system PATH.",
     )
+
+    st.divider()
 
     c1, c2 = st.columns([1, 1])
     with c1:
@@ -152,6 +164,7 @@ if sub_view == "Connection Settings":
                 st.error("Username, password, host, port, and service name are all required.", icon="✖️")
             else:
                 try:
+                    _ensure_thick_mode(client_path)
                     conn = oracledb.connect(user=username, password=password, dsn=dsn_input)
                     conn.close()
                     st.success("Connection successful.")
@@ -164,6 +177,7 @@ if sub_view == "Connection Settings":
                 st.error("Username, password, host, port, and service name are all required.", icon="✖️")
             else:
                 try:
+                    _ensure_thick_mode(client_path)
                     if st.session_state["ora_connected"] and st.session_state["ora_connection"]:
                         try:
                             st.session_state["ora_connection"].close()
